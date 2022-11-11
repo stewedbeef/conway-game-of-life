@@ -1,3 +1,4 @@
+// args: iterations file
 #pragma GCC diagnostic ignored "-Wnarrowing"
 
 #include <csignal>
@@ -13,7 +14,6 @@ extern "C" {
 }
 
 constexpr char empty{' '}, alive{'X'};
-constexpr int times{ 100 };
 
 using Row = std::vector<char>;
 using Board = std::vector<Row>;
@@ -23,12 +23,30 @@ int checkNeighbors(const Board&, int, int);
 void iterateBoard(Board&);
 void printBoard(const Board&);
 
-int main(int argc, char **argv) {
+int main(int argc, char *argv[]) {
 	signal(SIGTERM, term);
 	initscr();
 	Board board;
 
-	int y, x;
+	int times = 0;
+	int arg;
+	int y = 0, x = 0;
+	// Parse arguments
+	while ((arg = getopt(argc, argv, "t:f:")) != -1) {
+		switch(arg) {
+			case 't':
+				for (int i{ 0 }; optarg[i] != '\0'; ++i)
+					if ('0' <= optarg[i] && optarg[i] <= '9')
+						times = times * 10 + (optarg[i] - '0');
+				break;
+			// TODO: get file name, store
+			case 'f':
+				break;
+		}
+	}
+	if (times == 0)
+		times = 100;
+
 	getmaxyx(stdscr, y, x);
 	y = 30; x = 120;
 	board.resize(y);
