@@ -1,7 +1,8 @@
-// args: iterations file
 #pragma GCC diagnostic ignored "-Wnarrowing"
 
 #include <csignal>
+#include <fstream>
+#include <limits>
 #include <random>
 #include <utility>
 #include <vector>
@@ -25,14 +26,18 @@ void printBoard(const Board&);
 
 int main(int argc, char *argv[]) {
 	signal(SIGTERM, term);
-	initscr();
 	Board board;
+	initscr();
+	noecho();
+	cbreak();
 
-	int times = 0;
+	int y{ 0 }, x{ 0 };
+
+	int times{ 0 };
 	int arg;
-	int y = 0, x = 0;
+	bool isReadingFile{ false };
 	// Parse arguments
-	while ((arg = getopt(argc, argv, "t:f:")) != -1) {
+	while ((arg = getopt(argc, argv, "t:f:i")) != -1) {
 		switch(arg) {
 			case 't':
 				for (int i{ 0 }; optarg[i] != '\0'; ++i)
@@ -41,26 +46,83 @@ int main(int argc, char *argv[]) {
 				break;
 			// TODO: get file name, store
 			case 'f':
+				if (!isReadingFile) {
+					std::ifstream file{ optarg, std::ios::in };
+				}
+				break;
+			// TODO: get input
+			case 'i': // short for input
+				if (!isReadingFile) {
+					int xmax, ymax;
+					getmaxyx(stdscr, ymax, xmax);
+					board.resize(ymax);
+					for (auto& row : board) {
+						row.resize(xmax);
+						for (auto& cell : row)
+							cell = empty;
+					}
+					int x{ 0 }, y{ 0 };
+
+					char in{};
+					curs_set(2);
+					do {
+						switch (in = getch()) {
+							case 'w':
+								if (y >= 0)
+									--y;
+								break;
+							case 'a':
+								if (x >= 0)
+									--x;
+								break;
+							case 's':
+								if (y < ymax)
+									++y;
+								break;
+							case 'd':
+								if (x < xmax)
+									++x;
+								break;
+							case ' ':
+								if (board[y][x] == alive)
+									board[y][x] = empty;
+								else
+									board[y][x] = alive;
+								break;
+						}
+						printBoard(board);
+						move(y, x);
+					} while (in != 'z');
+					isReadingFile = true;
+				}
 				break;
 		}
 	}
 	if (times == 0)
 		times = 100;
 
-	getmaxyx(stdscr, y, x);
-	y = 30; x = 120;
-	board.resize(y);
-	for (auto& row : board)
-		row.resize(x);
+	if (!isReadingFile) {
+		getmaxyx(stdscr, y, x);
+		if (y == 0 || x == 0) {
+			y = 30;
+			x = 120;
+		}
 
-	std::random_device rd;
-	std::mt19937 mt{ rd() };
-	std::uniform_int_distribution<int> dist{ 0, 1 };
-	for (auto& row : board)
-		for (auto& cell : row)
-			cell = dist(mt) == 1 ? alive : empty;
+		board.resize(y);
+		for (auto& row : board)
+			row.resize(x);
+
+		std::random_device rd;
+		std::mt19937 mt{ rd() };
+		std::uniform_int_distribution<int> dist{ 0, 1 };
+		for (auto& row : board)
+			for (auto& cell : row)
+				cell = (dist(mt) == 1 ? alive : empty);
+	}
+
 
 	printBoard(board);
+	curs_set(0);
 	for (int i{ 0 }; i < times; ++i) {
 		sleep(1);
 		iterateBoard(board);
@@ -130,9 +192,8 @@ void printBoard(const Board& board) {
 	move(0, 0);
 	for (int y{ 0 }; y < board.size(); ++y) {
 		for (int x{ 0 }; x < board[0].size(); ++x) {
-			addch(board[y][x]);
+			mvaddch(y, x, board[y][x]);
 		}
-		move(y, 0);
 	}
 	refresh();
 }
