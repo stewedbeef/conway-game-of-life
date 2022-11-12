@@ -37,20 +37,13 @@ int main(int argc, char *argv[]) {
 	int arg;
 	bool isReadingFile{ false };
 	// Parse arguments
-	while ((arg = getopt(argc, argv, "t:f:i")) != -1) {
+	while ((arg = getopt(argc, argv, "t:i")) != -1) {
 		switch(arg) {
 			case 't':
 				for (int i{ 0 }; optarg[i] != '\0'; ++i)
 					if ('0' <= optarg[i] && optarg[i] <= '9')
 						times = times * 10 + (optarg[i] - '0');
 				break;
-			// TODO: get file name, store
-			case 'f':
-				if (!isReadingFile) {
-					std::ifstream file{ optarg, std::ios::in };
-				}
-				break;
-			// TODO: get input
 			case 'i': // short for input
 				if (!isReadingFile) {
 					int xmax, ymax;
@@ -120,7 +113,6 @@ int main(int argc, char *argv[]) {
 				cell = (dist(mt) == 1 ? alive : empty);
 	}
 
-
 	printBoard(board);
 	curs_set(0);
 	for (int i{ 0 }; i < times; ++i) {
@@ -140,24 +132,20 @@ void term(int sig) {
 
 int countNeighbors(const Board& board, int x, int y) {
 	int n{ 0 };
-	static constexpr int neighbors[9][2]{
+	static constexpr int neighbors[8][2]{
 			{-1,-1},{-1,0},{-1,1},
-			{ 0,-1},{ 0,0},{ 0,1},
+			{ 0,-1},       { 0,1},
 			{ 1,-1},{ 1,0},{ 1,1}
 	};
-	static const auto bound = [](int x, int lower, int upper) -> int {
-		if (x < lower)
-			return lower;
-		else if (x > upper)
-			return upper;
-		else
-			return x;
+	static const auto bounded = [](int x, int lower, int upper) -> bool {
+		return lower <= x && x <= upper;
 	};
 	int ymax = board.size(), xmax = board[0].size();
 	for (const auto& neighbor : neighbors) {
-		if (board[bound(y + neighbor[1], 0, ymax - 1)]
-				[bound(x + neighbor[0], 0, xmax - 1)] == alive)
-			++n;
+		if (bounded(y + neighbor[1], 0, ymax - 1)
+				&& bounded(x + neighbor[0], 0, xmax - 1))
+			if (board[y + neighbor[1]][x + neighbor[0]] == alive)
+				++n;
 	}
 
 	return n;
